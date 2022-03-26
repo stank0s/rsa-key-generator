@@ -64,10 +64,10 @@ func (k *KeyPair) GenerateKeys() error {
 	return nil
 }
 
-func (k *KeyPair) PublicKeyToString() string {
-	pKey := strings.ReplaceAll(k.Public.String(), "\n", "")
+func (k *KeyPair) PublicKeyToString() (pKey string) {
+	pKey = strings.ReplaceAll(k.Public.String(), "\n", "")
 	pKey = strings.ReplaceAll(pKey, "-----BEGIN PUBLIC KEY-----", "")
 	pKey = strings.ReplaceAll(pKey, "-----END PUBLIC KEY-----", "")
 
-	return pKey
+	return
 }
