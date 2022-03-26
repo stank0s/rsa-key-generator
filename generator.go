@@ -15,10 +15,22 @@ var encodePrivateKey func(out io.Writer, b *pem.Block) error = pem.Encode
 var marshalPublicKey func(pub any) ([]byte, error) = x509.MarshalPKIXPublicKey
 var generateKey func(random io.Reader, bits int) (*rsa.PrivateKey, error) = rsa.GenerateKey
 
-func GenerateKeys() (privateKey, publicKey bytes.Buffer, err error) {
+type KeyPair struct {
+	Private bytes.Buffer
+	Public  bytes.Buffer
+}
+
+func NewKeyPair() *KeyPair {
+	return &KeyPair{
+		Private: bytes.Buffer{},
+		Public:  bytes.Buffer{},
+	}
+}
+
+func (k *KeyPair) GenerateKeys() error {
 	key, err := generateKey(rand.Reader, 2048)
 	if err != nil {
-		return privateKey, publicKey, err
+		return err
 	}
 
 	privateKeyBytes := x509.MarshalPKCS1PrivateKey(key)
@@ -27,14 +39,14 @@ func GenerateKeys() (privateKey, publicKey bytes.Buffer, err error) {
 		Bytes: privateKeyBytes,
 	}
 
-	err = encodePrivateKey(&privateKey, privateKeyBlock)
+	err = encodePrivateKey(&k.Private, privateKeyBlock)
 	if err != nil {
-		return privateKey, publicKey, err
+		return err
 	}
 
 	publicKeyBytes, err := marshalPublicKey(&key.PublicKey)
 	if err != nil {
-		return privateKey, publicKey, err
+		return err
 	}
 
 	publicKeyBlock := &pem.Block{
@@ -42,19 +54,18 @@ func GenerateKeys() (privateKey, publicKey bytes.Buffer, err error) {
 		Bytes: publicKeyBytes,
 	}
 
-	err = encodePublicKey(&publicKey, publicKeyBlock)
+	err = encodePublicKey(&k.Public, publicKeyBlock)
 	if err != nil {
-		return privateKey, publicKey, err
+		return err
 	}
 
-	return privateKey, publicKey, nil
+	return nil
 }
 
-// NormalizePublicKeyString creates one line string without comments and line breaks
-func NormalizePublicKeyString(publicKey string) (pKey string) {
-	pKey = strings.ReplaceAll(publicKey, "\n", "")
+func (k *KeyPair) PublicKeyToString() string {
+	pKey := strings.ReplaceAll(k.Public.String(), "\n", "")
 	pKey = strings.ReplaceAll(pKey, "-----BEGIN PUBLIC KEY-----", "")
 	pKey = strings.ReplaceAll(pKey, "-----END PUBLIC KEY-----", "")
 
-	return
+	return pKey
 }

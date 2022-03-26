@@ -12,15 +12,14 @@ import (
 )
 
 func Test_GenerateKeys_Happy(t *testing.T) {
+	// given: test subject
+	k := NewKeyPair()
+
 	// when: calling function
-	priv, pub, err := GenerateKeys()
+	err := k.GenerateKeys()
 
 	// then: no error returned
 	assert.NoError(t, err)
-	assert.NotEmpty(t, priv)
-	assert.NotEmpty(t, pub)
-	assert.IsType(t, bytes.Buffer{}, priv)
-	assert.IsType(t, bytes.Buffer{}, pub)
 }
 
 func Test_GenerateKeys_GenerateKey_Error(t *testing.T) {
@@ -30,8 +29,11 @@ func Test_GenerateKeys_GenerateKey_Error(t *testing.T) {
 		return nil, errors.New("test error")
 	}
 
+	// and: test subject
+	k := NewKeyPair()
+
 	// when: calling function
-	_, _, err := GenerateKeys()
+	err := k.GenerateKeys()
 
 	// then: error returned
 	assert.Error(t, err)
@@ -46,8 +48,11 @@ func Test_GenerateKeys_MarshalPublicKey_Error(t *testing.T) {
 		return nil, errors.New("test error")
 	}
 
+	// and: test subject
+	k := NewKeyPair()
+
 	// when: calling function
-	_, _, err := GenerateKeys()
+	err := k.GenerateKeys()
 
 	// then: error returned
 	assert.Error(t, err)
@@ -62,8 +67,11 @@ func Test_GenerateKeys_EncodePrivateKey_Error(t *testing.T) {
 		return errors.New("test error")
 	}
 
+	// and: test subject
+	k := NewKeyPair()
+
 	// when: calling function
-	_, _, err := GenerateKeys()
+	err := k.GenerateKeys()
 
 	// then: error returned
 	assert.Error(t, err)
@@ -78,8 +86,11 @@ func Test_GenerateKeys_EncodePublicKey_Error(t *testing.T) {
 		return errors.New("test error")
 	}
 
+	// and: test subject
+	k := NewKeyPair()
+
 	// when: calling function
-	_, _, err := GenerateKeys()
+	err := k.GenerateKeys()
 
 	// then: error returned
 	assert.Error(t, err)
@@ -87,7 +98,7 @@ func Test_GenerateKeys_EncodePublicKey_Error(t *testing.T) {
 	encodePublicKey = tmp
 }
 
-func Test_NormalizePublicKeyString(t *testing.T) {
+func Test_PublicKeyToString(t *testing.T) {
 	// given: test public key
 	s := `
 -----BEGIN PUBLIC KEY-----
@@ -96,8 +107,13 @@ string-content
 -----END PUBLIC KEY-----
 `
 
+	// and: test subject
+	k := NewKeyPair()
+
+	k.Public = *bytes.NewBuffer([]byte(s))
+
 	// when: calling function
-	res := NormalizePublicKeyString(s)
+	res := k.PublicKeyToString()
 
 	// then: string has been normalized
 	assert.Equal(t, "test-public-string-content", res)
