@@ -110,7 +110,7 @@ string-content
 	// and: test subject
 	k := NewKeyPair()
 
-	k.Public = *bytes.NewBuffer([]byte(s))
+	k.Public = bytes.NewBuffer([]byte(s))
 
 	// when: calling function
 	res := k.PublicKeyToString()

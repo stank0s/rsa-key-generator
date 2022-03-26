@@ -16,18 +16,20 @@ var marshalPublicKey func(pub any) ([]byte, error) = x509.MarshalPKIXPublicKey
 var generateKey func(random io.Reader, bits int) (*rsa.PrivateKey, error) = rsa.GenerateKey
 
 type KeyPair struct {
-	Private bytes.Buffer
-	Public  bytes.Buffer
+	Private *bytes.Buffer
+	Public  *bytes.Buffer
 }
 
 func NewKeyPair() *KeyPair {
 	return &KeyPair{
-		Private: bytes.Buffer{},
-		Public:  bytes.Buffer{},
+		Private: &bytes.Buffer{},
+		Public:  &bytes.Buffer{},
 	}
 }
 
 func (k *KeyPair) GenerateKeys() error {
+	k.Private, k.Public = &bytes.Buffer{}, &bytes.Buffer{}
+
 	key, err := generateKey(rand.Reader, 2048)
 	if err != nil {
 		return err
@@ -39,7 +41,7 @@ func (k *KeyPair) GenerateKeys() error {
 		Bytes: privateKeyBytes,
 	}
 
-	err = encodePrivateKey(&k.Private, privateKeyBlock)
+	err = encodePrivateKey(k.Private, privateKeyBlock)
 	if err != nil {
 		return err
 	}
@@ -54,7 +56,7 @@ func (k *KeyPair) GenerateKeys() error {
 		Bytes: publicKeyBytes,
 	}
 
-	err = encodePublicKey(&k.Public, publicKeyBlock)
+	err = encodePublicKey(k.Public, publicKeyBlock)
 	if err != nil {
 		return err
 	}
