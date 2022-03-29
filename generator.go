@@ -1,4 +1,4 @@
-package rsakeygenerator
+package generator
 
 import (
 	"bytes"
@@ -6,68 +6,71 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"io"
-	"strings"
+	"io/ioutil"
+
+	"golang.org/x/crypto/ssh"
 )
 
-var encodePublicKey func(out io.Writer, b *pem.Block) error = pem.Encode
-var encodePrivateKey func(out io.Writer, b *pem.Block) error = pem.Encode
-var marshalPublicKey func(pub any) ([]byte, error) = x509.MarshalPKIXPublicKey
-var generateKey func(random io.Reader, bits int) (*rsa.PrivateKey, error) = rsa.GenerateKey
-
-type KeyPair struct {
-	Private *bytes.Buffer
-	Public  *bytes.Buffer
+type Generator struct {
+	bitSize int
 }
 
-func NewKeyPair() *KeyPair {
-	return &KeyPair{
-		Private: &bytes.Buffer{},
-		Public:  &bytes.Buffer{},
-	}
+func NewGenerator(bitSize int) *Generator {
+	return &Generator{bitSize: bitSize}
 }
 
-func (k *KeyPair) GenerateKeys() error {
-	k.Private, k.Public = &bytes.Buffer{}, &bytes.Buffer{}
-
-	key, err := generateKey(rand.Reader, 2048)
+func (g *Generator) GenerateKeyPair() (Keys, error) {
+	privateKey, err := g.generatePrivateKey()
 	if err != nil {
-		return err
+		return Keys{}, err
 	}
 
-	privateKeyBytes := x509.MarshalPKCS1PrivateKey(key)
-	privateKeyBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: privateKeyBytes,
-	}
-
-	err = encodePrivateKey(k.Private, privateKeyBlock)
+	publicKeyBytes, err := g.generatePublicKey(&privateKey.PublicKey)
 	if err != nil {
-		return err
+		return Keys{}, err
 	}
 
-	publicKeyBytes, err := marshalPublicKey(&key.PublicKey)
-	if err != nil {
-		return err
-	}
+	privateKeyBytes := g.encodePrivateKeyToPEM(privateKey)
 
-	publicKeyBlock := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: publicKeyBytes,
-	}
-
-	err = encodePublicKey(k.Public, publicKeyBlock)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return Keys{
+		Public:  *bytes.NewBuffer(publicKeyBytes),
+		Private: *bytes.NewBuffer(privateKeyBytes),
+	}, nil
 }
 
-func (k *KeyPair) PublicKeyToString() (pKey string) {
-	pKey = strings.ReplaceAll(k.Public.String(), "\n", "")
-	pKey = strings.ReplaceAll(pKey, "-----BEGIN PUBLIC KEY-----", "")
-	pKey = strings.ReplaceAll(pKey, "-----END PUBLIC KEY-----", "")
+func (g *Generator) generatePrivateKey() (*rsa.PrivateKey, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, g.bitSize)
+	if err != nil {
+		return nil, err
+	}
 
-	return
+	err = privateKey.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	return privateKey, nil
+}
+
+func (g *Generator) encodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
+	privBlock := pem.Block{
+		Type:    "RSA PRIVATE KEY",
+		Headers: nil,
+		Bytes:   x509.MarshalPKCS1PrivateKey(privateKey),
+	}
+
+	return pem.EncodeToMemory(&privBlock)
+}
+
+func (g *Generator) generatePublicKey(privatekey *rsa.PublicKey) ([]byte, error) {
+	publicRsaKey, err := ssh.NewPublicKey(privatekey)
+	if err != nil {
+		return nil, err
+	}
+
+	return ssh.MarshalAuthorizedKey(publicRsaKey), nil
+}
+
+func (g *Generator) WriteKeyToFile(keyBytes []byte, filename string) error {
+	return ioutil.WriteFile(filename, keyBytes, 0600)
 }
